@@ -1,16 +1,17 @@
+#![allow(dead_code)]
 use raylib::prelude::*;
-
+use crate::line::line;
 pub struct Framebuffer {
     pub width: u32,
     pub height: u32,
-    pub color_bugger: Image,
+    pub color_buffer: Image,
     background_color: Color,
     current_color: Color,
 }
 
 impl Framebuffer {
     pub fn new(width: u32, height: u32, background_color: Color) -> Self {
-        let color_buffer = Image::gen_image_color(width, height, background_color);
+        let color_buffer = Image::gen_image_color(width.try_into().unwrap(), height.try_into().unwrap(), background_color);
         Framebuffer {
             width,
             height,
@@ -42,5 +43,32 @@ impl Framebuffer {
     pub fn render_to_file(&self, file_path: &str){
         self.color_buffer.export_image(file_path);
     }
+    pub fn swap_buffers(
+        &self,
+        window: &mut RaylibHandle,
+        raylib_thread: &RaylibThread,
+    ){
+        if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
+            let mut renderer = window.begin_drawing(raylib_thread);
+            renderer.draw_texture(&texture, 0, 0, Color::WHITE);
+    }
+    }   
+    pub fn render(
+        framebuffer: &mut Framebuffer,
+        translate_x: f32,
+        translate_y: f32,
+    ){
+        framebuffer.set_current_color(Color::GREEN);
+        line(
+            framebuffer,
+            Vector2::new(50.0 + translate_x, 50.0 + translate_y),
+            Vector2::new(350.0 + translate_x, 350.0 + translate_y),
+        );
+            framebuffer.set_current_color(Color::GREEN);
+        line(
+            framebuffer,
+            Vector2::new(350.0 + translate_x, 350.0 + translate_y),
+            Vector2::new(50.0 + translate_x, 50.0 + translate_y),
+        );
 }
-
+}
