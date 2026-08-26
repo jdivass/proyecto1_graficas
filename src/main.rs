@@ -1,4 +1,5 @@
 mod framebuffer;
+mod maze;
 mod line;
 
 use crate::framebuffer::Framebuffer;
