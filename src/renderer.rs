@@ -1,8 +1,9 @@
 use crate::caster::cast_ray;
 use crate::framebuffer::Framebuffer;
 use crate::line::line;
-use crate::maze::{render_maze, Maze};
+use crate::maze::{Maze, render_maze};
 use crate::player::Player;
+use crate::skull_kid::SkullKid;
 use crate::textures::TextureManager;
 use raylib::prelude::*;
 
@@ -12,19 +13,30 @@ pub enum RenderMode {
     ThreeD,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
     player: &Player,
     block_size: usize,
     textures: &TextureManager,
+    skull_kids: &[SkullKid],
+    elapsed_seconds: f32,
     attacking: bool,
     mode: RenderMode,
 ) {
     match mode {
         RenderMode::TwoD => render_2d(framebuffer, maze, player, block_size),
         RenderMode::ThreeD => {
-            render_3d(framebuffer, maze, player, block_size, textures);
+            render_3d(
+                framebuffer,
+                maze,
+                player,
+                block_size,
+                textures,
+                skull_kids,
+                elapsed_seconds,
+            );
             render_minimap(framebuffer, maze, player, block_size);
             render_weapon(framebuffer, textures, attacking);
         }
@@ -178,6 +190,8 @@ fn render_3d(
     player: &Player,
     block_size: usize,
     textures: &TextureManager,
+    skull_kids: &[SkullKid],
+    elapsed_seconds: f32,
 ) {
     let width = framebuffer.width as usize;
     let height = framebuffer.height as usize;
@@ -192,13 +206,15 @@ fn render_3d(
         projection_plane,
     );
 
-    for column in 0..width {
+    let mut depth_buffer = vec![f32::INFINITY; width];
+    for (column, depth) in depth_buffer.iter_mut().enumerate() {
         let ray_progress = column as f32 / (width - 1) as f32;
         let a = player.a - player.fov / 2.0 + player.fov * ray_progress;
         let intersect = cast_ray(framebuffer, maze, player, a, block_size, false);
 
         // Corregir ojo de pescado
         let corrected_distance = (intersect.distance * (a - player.a).cos()).max(0.1);
+        *depth = corrected_distance;
         let wall_height = block_size as f32 * projection_plane / corrected_distance;
         let projected_top = (height as f32 - wall_height) / 2.0;
         let wall_top = (projected_top.floor() as isize - 1).clamp(0, height as isize) as usize;
@@ -219,6 +235,87 @@ fn render_3d(
             brightness,
             intersect.impact,
         );
+    }
+
+    render_skull_kids(
+        framebuffer,
+        player,
+        block_size,
+        textures,
+        skull_kids,
+        elapsed_seconds,
+        projection_plane,
+        &depth_buffer,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_skull_kids(
+    framebuffer: &mut Framebuffer,
+    player: &Player,
+    block_size: usize,
+    textures: &TextureManager,
+    skull_kids: &[SkullKid],
+    elapsed_seconds: f32,
+    projection_plane: f32,
+    depth_buffer: &[f32],
+) {
+    let forward = Vector2::new(player.a.cos(), player.a.sin());
+    let right = Vector2::new(-player.a.sin(), player.a.cos());
+    let mut visible = skull_kids
+        .iter()
+        .filter_map(|skull_kid| {
+            let relative = skull_kid.position - player.pos;
+            let depth = relative.x * forward.x + relative.y * forward.y;
+            (depth > 1.0).then_some((skull_kid, relative, depth))
+        })
+        .collect::<Vec<_>>();
+
+    visible.sort_by(|left, right| right.2.total_cmp(&left.2));
+
+    for (skull_kid, relative, depth) in visible {
+        let side = relative.x * right.x + relative.y * right.y;
+        let screen_center_x = framebuffer.width as f32 / 2.0 + side * projection_plane / depth;
+        let frame = (((elapsed_seconds + skull_kid.animation_offset) * 2.0) as usize) % 4;
+        let texture = textures.skull_kid_texture(frame);
+        let sprite_height = block_size as f32 * 0.625 * projection_plane / depth;
+        let sprite_width = sprite_height * texture.aspect_ratio();
+        let bob = ((elapsed_seconds * 2.3 + skull_kid.animation_offset).sin()
+            * sprite_height
+            * 0.045) as isize;
+        let left = (screen_center_x - sprite_width / 2.0).floor() as isize;
+        let top = ((framebuffer.height as f32 - sprite_height) / 2.0).floor() as isize + bob;
+        let pixel_width = sprite_width.ceil().max(1.0) as usize;
+        let pixel_height = sprite_height.ceil().max(1.0) as usize;
+        let brightness = (230.0 / (1.0 + depth * 0.008)).clamp(80.0, 225.0) as u8;
+
+        let screen_left = left.max(0) as usize;
+        let screen_right = (left + pixel_width as isize)
+            .min(framebuffer.width as isize)
+            .max(0) as usize;
+        let screen_top = top.max(0) as usize;
+        let screen_bottom = (top + pixel_height as isize)
+            .min(framebuffer.height as isize)
+            .max(0) as usize;
+
+        for (screen_x, wall_depth) in depth_buffer
+            .iter()
+            .enumerate()
+            .take(screen_right)
+            .skip(screen_left)
+        {
+            if depth >= *wall_depth {
+                continue;
+            }
+
+            let u = (screen_x as isize - left) as f32 / pixel_width.saturating_sub(1).max(1) as f32;
+            for screen_y in screen_top..screen_bottom {
+                let v =
+                    (screen_y as isize - top) as f32 / pixel_height.saturating_sub(1).max(1) as f32;
+                let color = shade(texture.sample(u, v), brightness);
+                framebuffer.blend_pixel(screen_x as u32, screen_y as u32, color);
+            }
+        }
     }
 }
 

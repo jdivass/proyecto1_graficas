@@ -12,6 +12,7 @@ pub struct TextureManager {
     floor_texture: WallTexture,
     weapon_texture: WallTexture,
     attacking_texture: WallTexture,
+    skull_kid_textures: [WallTexture; 4],
     final_wall: (usize, usize),
 }
 
@@ -42,6 +43,12 @@ impl TextureManager {
         let sky_image = load_image(&texture_dir.join("sky.png"))?;
         let floor_image =
             load_first_image(&[texture_dir.join("floor.png"), texture_dir.join("floor.jpg")])?;
+        let skull_kid_textures = [
+            cache_image(&load_image(&texture_dir.join("skullkiddown.png"))?),
+            cache_image(&load_image(&texture_dir.join("skullkleft.png"))?),
+            cache_image(&load_image(&texture_dir.join("skullkidup.png"))?),
+            cache_image(&load_image(&texture_dir.join("skullkidright.png"))?),
+        ];
 
         let mut artwork_paths: Vec<PathBuf> = fs::read_dir(&texture_dir)
             .map_err(|error| format!("Failed to read {}: {error}", texture_dir.display()))?
@@ -49,16 +56,7 @@ impl TextureManager {
             .map(|entry| entry.path())
             .filter(|path| {
                 path.extension().and_then(|extension| extension.to_str()) == Some("png")
-                    && !matches!(
-                        path.file_name().and_then(|name| name.to_str()),
-                        Some(
-                            "attacking.png"
-                                | "background.png"
-                                | "final.png"
-                                | "sky.png"
-                                | "floor.png"
-                        )
-                    )
+                    && !is_environment_or_sprite(path)
             })
             .collect();
         artwork_paths.sort();
@@ -97,6 +95,7 @@ impl TextureManager {
             floor_texture,
             weapon_texture,
             attacking_texture,
+            skull_kid_textures,
             final_wall: find_final_wall(maze),
         })
     }
@@ -123,6 +122,10 @@ impl TextureManager {
         }
     }
 
+    pub fn skull_kid_texture(&self, frame: usize) -> &WallTexture {
+        &self.skull_kid_textures[frame % self.skull_kid_textures.len()]
+    }
+
     pub fn sky_pixel(&self, angle: f32, v: f32) -> Color {
         let u = (angle / std::f32::consts::TAU).rem_euclid(1.0);
         self.sky_texture.sample(u, v)
@@ -135,10 +138,26 @@ impl TextureManager {
         maze_width: f32,
         maze_height: f32,
     ) -> Color {
-        // Map one copy of floor.jpg across the complete maze instead of every cell.
         self.floor_texture
             .sample(world_x / maze_width, world_y / maze_height)
     }
+}
+
+fn is_environment_or_sprite(path: &Path) -> bool {
+    matches!(
+        path.file_name().and_then(|name| name.to_str()),
+        Some(
+            "attacking.png"
+                | "background.png"
+                | "final.png"
+                | "sky.png"
+                | "floor.png"
+                | "skullkiddown.png"
+                | "skullkleft.png"
+                | "skullkidup.png"
+                | "skullkidright.png"
+        )
+    )
 }
 
 fn cache_image(image: &Image) -> WallTexture {
@@ -324,7 +343,6 @@ fn find_final_wall(maze: &Maze) -> (usize, usize) {
         }
     }
 
-    // The finish is in the bottom-right corner, so its outer walls are safe fallbacks.
     (finish.0, finish.1 + 1)
 }
 

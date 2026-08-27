@@ -5,12 +5,14 @@ mod maze;
 mod movement;
 mod player;
 mod renderer;
+mod skull_kid;
 mod textures;
 use crate::framebuffer::Framebuffer;
 use crate::maze::create_maze;
 use crate::movement::handle_movement;
 use crate::player::Player;
-use crate::renderer::{render, RenderMode};
+use crate::renderer::{RenderMode, render};
+use crate::skull_kid::spawn_skull_kids;
 use crate::textures::TextureManager;
 use raylib::prelude::*;
 use std::time::{Duration, Instant};
@@ -76,15 +78,22 @@ fn main() {
         };
 
         let maze = create_maze(maze_width, maze_height);
+        let skull_kid_count = match (maze_width, maze_height) {
+            (15, 11) => 3,
+            (21, 15) => 6,
+            (31, 21) => 10,
+            _ => ((maze_width * maze_height) / 50).max(1),
+        };
+        let skull_kids = spawn_skull_kids(&maze, block_size, skull_kid_count);
         let textures = TextureManager::new(&maze).expect("Failed to load museum textures");
         let mut player = Player {
-            // The start is at maze cell (1, 1), so put the player in its center.
             pos: Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32),
             a: std::f32::consts::PI / 3.0,
             fov: std::f32::consts::PI / 3.0,
         };
         let mut render_mode = RenderMode::ThreeD;
         let mut attack_until: Option<Instant> = None;
+        let level_started = Instant::now();
         window.disable_cursor();
 
         loop {
@@ -121,6 +130,8 @@ fn main() {
                 &player,
                 block_size,
                 &textures,
+                &skull_kids,
+                level_started.elapsed().as_secs_f32(),
                 attacking,
                 render_mode,
             );

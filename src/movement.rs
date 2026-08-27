@@ -49,7 +49,6 @@ pub fn handle_movement(
 
     let movement = direction * movement;
 
-    // Resolve each axis separately so the player slides along walls at corners.
     let next_x = Vector2::new(player.pos.x + movement.x, player.pos.y);
     let x_wall = match collision_at(next_x, maze, block_size) {
         Collision::None => {
