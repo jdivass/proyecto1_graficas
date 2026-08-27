@@ -1,9 +1,8 @@
 #![allow(dead_code)]
-use rand::seq::SliceRandom;
-use rand::{rng};
 use crate::framebuffer::Framebuffer;
+use rand::rng;
+use rand::seq::SliceRandom;
 use raylib::prelude::*;
-
 pub type Maze = Vec<Vec<char>>;
 
 pub fn create_maze(width: usize, height: usize) -> Maze {

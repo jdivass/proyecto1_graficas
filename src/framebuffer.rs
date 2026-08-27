@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 use raylib::prelude::*;
-use crate::line::line;
-use crate::maze::Maze;
 pub struct Framebuffer {
     pub width: u32,
     pub height: u32,
