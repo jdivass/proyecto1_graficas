@@ -7,4 +7,4 @@ opt-level = 3
 debug = false
 [dependencies]
 rand = "0.10.2"
-raylib = {version = "6.0.0", features = ["SUPPORT_IMAGE_GENERATION"]}
+raylib = {version = "6.0.0", features = ["SUPPORT_IMAGE_GENERATION", "SUPPORT_FILEFORMAT_JPG"]}

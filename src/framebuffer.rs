@@ -6,6 +6,7 @@ pub struct Framebuffer {
     pub color_buffer: Image,
     background_color: Color,
     current_color: Color,
+    screen_texture: Option<Texture2D>,
 }
 
 impl Framebuffer {
@@ -15,27 +16,40 @@ impl Framebuffer {
             height.try_into().unwrap(),
             background_color,
         );
+        assert_eq!(
+            color_buffer.format(),
+            PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+            "Framebuffer requires an RGBA8 image"
+        );
         Framebuffer {
             width,
             height,
             color_buffer,
             background_color,
             current_color: Color::WHITE,
+            screen_texture: None,
         }
     }
 
     pub fn clear(&mut self) {
-        self.color_buffer = Image::gen_image_color(
-            self.width.try_into().unwrap(),
-            self.height.try_into().unwrap(),
-            self.background_color,
-        );
+        self.color_buffer.clear_background(self.background_color);
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32) {
+        self.set_pixel_color(x, y, self.current_color);
+    }
+
+    pub fn set_pixel_color(&mut self, x: u32, y: u32, color: Color) {
         if x < self.width && y < self.height {
-            self.color_buffer
-                .draw_pixel(x as i32, y as i32, self.current_color);
+            // Images created by gen_image_color use four-byte RGBA pixels.
+            let offset = ((y * self.width + x) * 4) as usize;
+            unsafe {
+                let pixel = (self.color_buffer.data as *mut u8).add(offset);
+                *pixel = color.r;
+                *pixel.add(1) = color.g;
+                *pixel.add(2) = color.b;
+                *pixel.add(3) = color.a;
+            }
         }
     }
 
@@ -50,10 +64,22 @@ impl Framebuffer {
     pub fn render_to_file(&self, file_path: &str) {
         self.color_buffer.export_image(file_path);
     }
-    pub fn swap_buffers(&self, window: &mut RaylibHandle, raylib_thread: &RaylibThread) {
-        if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer) {
+    pub fn swap_buffers(&mut self, window: &mut RaylibHandle, raylib_thread: &RaylibThread) {
+        if self.screen_texture.is_none() {
+            self.screen_texture = window
+                .load_texture_from_image(raylib_thread, &self.color_buffer)
+                .ok();
+        } else if let Some(texture) = self.screen_texture.as_mut() {
+            let data_length = self.color_buffer.get_pixel_data_size();
+            let pixels = unsafe {
+                std::slice::from_raw_parts(self.color_buffer.data as *const u8, data_length)
+            };
+            let _ = texture.update_texture(pixels);
+        }
+
+        if let Some(texture) = self.screen_texture.as_ref() {
             let mut renderer = window.begin_drawing(raylib_thread);
-            renderer.draw_texture(&texture, 0, 0, Color::WHITE);
+            renderer.draw_texture(texture, 0, 0, Color::WHITE);
         }
     }
 }

@@ -5,15 +5,14 @@ mod maze;
 mod movement;
 mod player;
 mod renderer;
-
+mod textures;
 use crate::framebuffer::Framebuffer;
 use crate::maze::create_maze;
 use crate::movement::handle_movement;
 use crate::player::Player;
 use crate::renderer::{render, RenderMode};
+use crate::textures::TextureManager;
 use raylib::prelude::*;
-use std::thread;
-use std::time::Duration;
 
 fn main() {
     const WINDOW_SCALE: f32 = 0.8;
@@ -23,6 +22,7 @@ fn main() {
         .title("Window Example")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
+    window.set_target_fps(60);
 
     let monitor = get_current_monitor();
     let monitor_width = get_monitor_width(monitor);
@@ -46,6 +46,7 @@ fn main() {
     framebuffer.set_background_color(Color::new(50, 50, 100, 255));
 
     let maze = create_maze(15, 11);
+    let textures = TextureManager::new(&maze).expect("Failed to load museum textures");
     let block_size = 40;
     let mut player = Player {
         // The start is at maze cell (1, 1), so put the player in its center.
@@ -57,7 +58,7 @@ fn main() {
 
     while !window.window_should_close() {
         framebuffer.clear();
-        handle_movement(&window, &mut player);
+        handle_movement(&window, &mut player, &maze, block_size);
 
         if window.is_key_pressed(KeyboardKey::KEY_M) {
             render_mode = match render_mode {
@@ -66,10 +67,15 @@ fn main() {
             };
         }
 
-        render(&mut framebuffer, &maze, &player, block_size, render_mode);
+        render(
+            &mut framebuffer,
+            &maze,
+            &player,
+            block_size,
+            &textures,
+            render_mode,
+        );
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
-
-        thread::sleep(Duration::from_millis(16));
     }
 }
