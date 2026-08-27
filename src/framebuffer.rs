@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use raylib::prelude::*;
 use crate::line::line;
+use crate::maze::Maze;
 pub struct Framebuffer {
     pub width: u32,
     pub height: u32,
@@ -52,23 +53,7 @@ impl Framebuffer {
             let mut renderer = window.begin_drawing(raylib_thread);
             renderer.draw_texture(&texture, 0, 0, Color::WHITE);
     }
-    }   
-    pub fn render(
-        framebuffer: &mut Framebuffer,
-        translate_x: f32,
-        translate_y: f32,
-    ){
-        framebuffer.set_current_color(Color::GREEN);
-        line(
-            framebuffer,
-            Vector2::new(50.0 + translate_x, 50.0 + translate_y),
-            Vector2::new(350.0 + translate_x, 350.0 + translate_y),
-        );
-            framebuffer.set_current_color(Color::GREEN);
-        line(
-            framebuffer,
-            Vector2::new(350.0 + translate_x, 350.0 + translate_y),
-            Vector2::new(50.0 + translate_x, 50.0 + translate_y),
-        );
+    }
+
 }
-}
+

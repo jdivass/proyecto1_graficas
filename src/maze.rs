@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 use rand::seq::SliceRandom;
 use rand::{rng};
+use crate::framebuffer::Framebuffer;
+use raylib::prelude::*;
 
-type Maze = Vec<Vec<char>>;
+pub type Maze = Vec<Vec<char>>;
 
-fn create_maze(width: usize, height: usize) -> Maze {
+pub fn create_maze(width: usize, height: usize) -> Maze {
     let width = width.max(3);
     let height = height.max(3);
 
@@ -69,3 +71,45 @@ fn create_maze(width: usize, height: usize) -> Maze {
     maze
 }
 
+pub fn draw_cell(
+    framebuffer: &mut Framebuffer,
+    xo: usize,
+    yo: usize,
+    block_size: usize,
+    cell: char,
+) {
+    match cell {
+        '#' => {
+            framebuffer.set_current_color(Color::BLUE);
+        }
+        's' => {
+            framebuffer.set_current_color(Color::GREEN);
+        }
+        'f' => {
+            framebuffer.set_current_color(Color::RED);
+        }
+        _ => {
+            framebuffer.set_current_color(Color::WHITE);
+        }
+    }
+
+    for x in xo..xo + block_size {
+        for y in yo..yo + block_size {
+            framebuffer.set_pixel(x as u32, y as u32);
+        }
+    }
+}
+
+pub fn render_maze(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    block_size: usize,
+) {
+    for (row_index, row) in maze.iter().enumerate() {
+        for (col_index, &cell) in row.iter().enumerate() {
+            let xo = col_index * block_size;
+            let yo = row_index * block_size;
+            draw_cell(framebuffer, xo, yo, block_size, cell);
+        }
+    }
+}
