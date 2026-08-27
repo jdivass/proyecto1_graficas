@@ -1,5 +1,6 @@
 use crate::caster::cast_ray;
 use crate::framebuffer::Framebuffer;
+use crate::line::line;
 use crate::maze::{render_maze, Maze};
 use crate::player::Player;
 use crate::textures::TextureManager;
@@ -21,7 +22,10 @@ pub fn render(
 ) {
     match mode {
         RenderMode::TwoD => render_2d(framebuffer, maze, player, block_size),
-        RenderMode::ThreeD => render_3d(framebuffer, maze, player, block_size, textures),
+        RenderMode::ThreeD => {
+            render_3d(framebuffer, maze, player, block_size, textures);
+            render_minimap(framebuffer, maze, player, block_size);
+        }
     }
 }
 
@@ -44,6 +48,92 @@ fn render_2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, block_
             if x >= 0 && y >= 0 {
                 framebuffer.set_pixel(x as u32, y as u32);
             }
+        }
+    }
+}
+
+fn render_minimap(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, block_size: usize) {
+    const MARGIN: usize = 16;
+    const PADDING: usize = 4;
+
+    let columns = maze[0].len();
+    let rows = maze.len();
+    let max_width = framebuffer.width as f32 * 0.24;
+    let max_height = framebuffer.height as f32 * 0.28;
+    let cell_size = (max_width / columns as f32)
+        .min(max_height / rows as f32)
+        .floor()
+        .max(3.0) as usize;
+    let map_width = columns * cell_size;
+    let map_height = rows * cell_size;
+    let origin_x = MARGIN + PADDING;
+    let origin_y = MARGIN + PADDING;
+
+    fill_rectangle(
+        framebuffer,
+        MARGIN,
+        MARGIN,
+        map_width + PADDING * 2,
+        map_height + PADDING * 2,
+        Color::new(8, 8, 12, 255),
+    );
+
+    for (map_y, row) in maze.iter().enumerate() {
+        for (map_x, cell) in row.iter().enumerate() {
+            let color = match cell {
+                '#' => Color::new(125, 122, 122, 255),
+                's' => Color::new(179, 191, 23, 255),
+                'f' => Color::new(153, 0, 0, 255),
+                _ => Color::new(215, 205, 175, 255),
+            };
+            fill_rectangle(
+                framebuffer,
+                origin_x + map_x * cell_size,
+                origin_y + map_y * cell_size,
+                cell_size,
+                cell_size,
+                color,
+            );
+        }
+    }
+
+    let scale = cell_size as f32 / block_size as f32;
+    let player_position = Vector2::new(
+        origin_x as f32 + player.pos.x * scale,
+        origin_y as f32 + player.pos.y * scale,
+    );
+    let marker_radius = (cell_size / 4).max(2) as i32;
+    fill_rectangle(
+        framebuffer,
+        (player_position.x as i32 - marker_radius).max(0) as usize,
+        (player_position.y as i32 - marker_radius).max(0) as usize,
+        (marker_radius * 2 + 1) as usize,
+        (marker_radius * 2 + 1) as usize,
+        Color::MAGENTA,
+    );
+
+    framebuffer.set_current_color(Color::YELLOW);
+    let direction_length = (cell_size * 2).max(8) as f32;
+    let direction_end = Vector2::new(
+        (player_position.x + player.a.cos() * direction_length)
+            .clamp(origin_x as f32, (origin_x + map_width - 1) as f32),
+        (player_position.y + player.a.sin() * direction_length)
+            .clamp(origin_y as f32, (origin_y + map_height - 1) as f32),
+    );
+    line(framebuffer, player_position, direction_end);
+}
+
+fn fill_rectangle(
+    framebuffer: &mut Framebuffer,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+    color: Color,
+) {
+    for pixel_y in y..y + height {
+        for pixel_x in x..x + width {
+            framebuffer.set_pixel_color(pixel_x as u32, pixel_y as u32, color);
         }
     }
 }
@@ -117,13 +207,11 @@ fn render_surfaces(
         let ray_progress = column as f32 / (width - 1) as f32;
         let a = player.a - player.fov / 2.0 + player.fov * ray_progress;
 
-        // One panoramic sky image wraps around the complete viewing angle.
         for y in 0..horizon {
             let v = y as f32 / horizon as f32;
             framebuffer.set_pixel_color(column as u32, y as u32, textures.sky_pixel(a, v));
         }
 
-        // Perspective floor casting, with one image stretched across the whole maze.
         for y in horizon..height {
             let distance_from_horizon = (y - horizon) as f32 + 0.5;
             let perpendicular_distance = camera_height * projection_plane / distance_from_horizon;
