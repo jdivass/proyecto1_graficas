@@ -1,12 +1,8 @@
 #![allow(dead_code)]
-use raylib::prelude::*;
 use crate::framebuffer::Framebuffer;
+use raylib::prelude::*;
 
-pub fn line(
-    framebuffer: &mut Framebuffer,
-    start: Vector2,
-    end: Vector2,
-) {
+pub fn line(framebuffer: &mut Framebuffer, start: Vector2, end: Vector2) {
     let mut x0 = start.x as i32;
     let mut y0 = start.y as i32;
     let x1 = end.x as i32;

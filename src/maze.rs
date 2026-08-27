@@ -10,29 +10,16 @@ pub fn create_maze(width: usize, height: usize) -> Maze {
     let height = height.max(3);
 
     // The maze algorithm requires odd dimensions.
-    let width = if width % 2 == 0 {
-        width - 1
-    } else {
-        width
-    };
+    let width = if width % 2 == 0 { width - 1 } else { width };
 
-    let height = if height % 2 == 0 {
-        height - 1
-    } else {
-        height
-    };
+    let height = if height % 2 == 0 { height - 1 } else { height };
 
     let mut maze = vec![vec!['#'; width]; height];
 
     maze[1][1] = '.';
 
     fn carve(maze: &mut Maze, x: usize, y: usize) {
-        let mut directions = [
-            (2isize, 0isize),
-            (-2, 0),
-            (0, 2),
-            (0, -2),
-        ];
+        let mut directions = [(2isize, 0isize), (-2, 0), (0, 2), (0, -2)];
 
         directions.shuffle(&mut rng());
 
@@ -99,11 +86,7 @@ pub fn draw_cell(
     }
 }
 
-pub fn render_maze(
-    framebuffer: &mut Framebuffer,
-    maze: &Maze,
-    block_size: usize,
-) {
+pub fn render_maze(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize) {
     for (row_index, row) in maze.iter().enumerate() {
         for (col_index, &cell) in row.iter().enumerate() {
             let xo = col_index * block_size;
