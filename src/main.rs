@@ -16,14 +16,26 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
-    let window_width = 800;
-    let window_height = 600;
+    const WINDOW_SCALE: f32 = 0.8;
 
     let (mut window, raylib_thread) = raylib::init()
-        .size(window_width, window_height)
+        .size(800, 600)
         .title("Window Example")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
+
+    let monitor = get_current_monitor();
+    let monitor_width = get_monitor_width(monitor);
+    let monitor_height = get_monitor_height(monitor);
+    let monitor_position = get_monitor_position(monitor);
+    let window_width = (monitor_width as f32 * WINDOW_SCALE) as i32;
+    let window_height = (monitor_height as f32 * WINDOW_SCALE) as i32;
+
+    window.set_window_size(window_width, window_height);
+    window.set_window_position(
+        monitor_position.x as i32 + (monitor_width - window_width) / 2,
+        monitor_position.y as i32 + (monitor_height - window_height) / 2,
+    );
 
     let mut framebuffer = Framebuffer::new(
         window_width as u32,

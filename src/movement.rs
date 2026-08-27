@@ -2,8 +2,8 @@ use crate::player::Player;
 use raylib::prelude::*;
 use std::f32::consts::PI;
 
-pub const MOVE_SPEED: f32 = 5.0;
-pub const ROTATION_SPEED: f32 = PI / 10.0;
+pub const MOVE_SPEED: f32 = 8.0;
+pub const ROTATION_SPEED: f32 = PI / 15.0;
 
 pub fn handle_movement(window: &RaylibHandle, player: &mut Player) {
     if window.is_key_down(KeyboardKey::KEY_LEFT) || window.is_key_down(KeyboardKey::KEY_A) {
