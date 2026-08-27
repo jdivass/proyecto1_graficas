@@ -1,10 +1,11 @@
 use crate::maze::Maze;
 use crate::player::Player;
 use raylib::prelude::*;
-use std::f32::consts::PI;
+use std::f32::consts::{PI, TAU};
 
 pub const MOVE_SPEED: f32 = 8.0;
 pub const ROTATION_SPEED: f32 = PI / 15.0;
+pub const MOUSE_SENSITIVITY: f32 = 0.0035;
 const PLAYER_RADIUS: f32 = 8.0;
 
 pub struct MovementResult {
@@ -24,6 +25,9 @@ pub fn handle_movement(
     maze: &Maze,
     block_size: usize,
 ) -> MovementResult {
+    let mouse_movement = window.get_mouse_delta();
+    player.a = (player.a + mouse_movement.x * MOUSE_SENSITIVITY).rem_euclid(TAU);
+
     if window.is_key_down(KeyboardKey::KEY_LEFT) || window.is_key_down(KeyboardKey::KEY_A) {
         player.a -= ROTATION_SPEED;
     }

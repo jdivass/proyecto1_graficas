@@ -1,2 +1,2 @@
-# proyecto1_graficas
-Raytracing
+# Graficas por computadora - Raycasting - Proyecto 1
+

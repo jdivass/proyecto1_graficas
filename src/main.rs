@@ -68,6 +68,7 @@ fn main() {
     let block_size = 40;
 
     loop {
+        window.enable_cursor();
         let Some((maze_width, maze_height)) =
             select_level(&mut window, &raylib_thread, &background_music)
         else {
@@ -84,6 +85,7 @@ fn main() {
         };
         let mut render_mode = RenderMode::ThreeD;
         let mut attack_until: Option<Instant> = None;
+        window.disable_cursor();
 
         loop {
             if window.window_should_close() {
@@ -126,6 +128,7 @@ fn main() {
             framebuffer.swap_buffers(&mut window, &raylib_thread);
         }
 
+        window.enable_cursor();
         if !show_win_screen(&mut window, &raylib_thread, &background_music) {
             return;
         }
