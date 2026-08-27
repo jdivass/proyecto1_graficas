@@ -7,7 +7,23 @@ pub const MOVE_SPEED: f32 = 8.0;
 pub const ROTATION_SPEED: f32 = PI / 15.0;
 const PLAYER_RADIUS: f32 = 8.0;
 
-pub fn handle_movement(window: &RaylibHandle, player: &mut Player, maze: &Maze, block_size: usize) {
+pub struct MovementResult {
+    x_wall: Option<(usize, usize)>,
+    y_wall: Option<(usize, usize)>,
+}
+
+impl MovementResult {
+    pub fn hit_wall(&self, wall: (usize, usize)) -> bool {
+        self.x_wall == Some(wall) || self.y_wall == Some(wall)
+    }
+}
+
+pub fn handle_movement(
+    window: &RaylibHandle,
+    player: &mut Player,
+    maze: &Maze,
+    block_size: usize,
+) -> MovementResult {
     if window.is_key_down(KeyboardKey::KEY_LEFT) || window.is_key_down(KeyboardKey::KEY_A) {
         player.a -= ROTATION_SPEED;
     }
@@ -31,33 +47,54 @@ pub fn handle_movement(window: &RaylibHandle, player: &mut Player, maze: &Maze, 
 
     // Resolve each axis separately so the player slides along walls at corners.
     let next_x = Vector2::new(player.pos.x + movement.x, player.pos.y);
-    if can_stand_at(next_x, maze, block_size) {
-        player.pos.x = next_x.x;
-    }
+    let x_wall = match collision_at(next_x, maze, block_size) {
+        Collision::None => {
+            player.pos.x = next_x.x;
+            None
+        }
+        Collision::Wall(wall) => Some(wall),
+        Collision::Boundary => None,
+    };
 
     let next_y = Vector2::new(player.pos.x, player.pos.y + movement.y);
-    if can_stand_at(next_y, maze, block_size) {
-        player.pos.y = next_y.y;
-    }
+    let y_wall = match collision_at(next_y, maze, block_size) {
+        Collision::None => {
+            player.pos.y = next_y.y;
+            None
+        }
+        Collision::Wall(wall) => Some(wall),
+        Collision::Boundary => None,
+    };
+
+    MovementResult { x_wall, y_wall }
 }
 
-fn can_stand_at(position: Vector2, maze: &Maze, block_size: usize) -> bool {
+enum Collision {
+    None,
+    Wall((usize, usize)),
+    Boundary,
+}
+
+fn collision_at(position: Vector2, maze: &Maze, block_size: usize) -> Collision {
     for offset_x in [-PLAYER_RADIUS, PLAYER_RADIUS] {
         for offset_y in [-PLAYER_RADIUS, PLAYER_RADIUS] {
             let x = position.x + offset_x;
             let y = position.y + offset_y;
 
             if x < 0.0 || y < 0.0 {
-                return false;
+                return Collision::Boundary;
             }
 
             let map_x = x as usize / block_size;
             let map_y = y as usize / block_size;
-            if map_y >= maze.len() || map_x >= maze[map_y].len() || maze[map_y][map_x] == '#' {
-                return false;
+            if map_y >= maze.len() || map_x >= maze[map_y].len() {
+                return Collision::Boundary;
+            }
+            if maze[map_y][map_x] == '#' {
+                return Collision::Wall((map_x, map_y));
             }
         }
     }
 
-    true
+    Collision::None
 }

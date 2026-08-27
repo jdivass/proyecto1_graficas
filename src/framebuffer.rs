@@ -53,6 +53,26 @@ impl Framebuffer {
         }
     }
 
+    pub fn blend_pixel(&mut self, x: u32, y: u32, foreground: Color) {
+        if x >= self.width || y >= self.height || foreground.a == 0 {
+            return;
+        }
+        if foreground.a == 255 {
+            self.set_pixel_color(x, y, foreground);
+            return;
+        }
+
+        let offset = ((y * self.width + x) * 4) as usize;
+        unsafe {
+            let pixel = (self.color_buffer.data as *mut u8).add(offset);
+            let alpha = foreground.a as f32 / 255.0;
+            *pixel = blend_channel(*pixel, foreground.r, alpha);
+            *pixel.add(1) = blend_channel(*pixel.add(1), foreground.g, alpha);
+            *pixel.add(2) = blend_channel(*pixel.add(2), foreground.b, alpha);
+            *pixel.add(3) = 255;
+        }
+    }
+
     pub fn set_background_color(&mut self, color: Color) {
         self.background_color = color;
     }
@@ -82,4 +102,8 @@ impl Framebuffer {
             renderer.draw_texture(texture, 0, 0, Color::WHITE);
         }
     }
+}
+
+fn blend_channel(background: u8, foreground: u8, alpha: f32) -> u8 {
+    (foreground as f32 * alpha + background as f32 * (1.0 - alpha)) as u8
 }

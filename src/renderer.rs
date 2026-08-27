@@ -18,6 +18,7 @@ pub fn render(
     player: &Player,
     block_size: usize,
     textures: &TextureManager,
+    attacking: bool,
     mode: RenderMode,
 ) {
     match mode {
@@ -25,6 +26,7 @@ pub fn render(
         RenderMode::ThreeD => {
             render_3d(framebuffer, maze, player, block_size, textures);
             render_minimap(framebuffer, maze, player, block_size);
+            render_weapon(framebuffer, textures, attacking);
         }
     }
 }
@@ -48,6 +50,26 @@ fn render_2d(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, block_
             if x >= 0 && y >= 0 {
                 framebuffer.set_pixel(x as u32, y as u32);
             }
+        }
+    }
+}
+
+fn render_weapon(framebuffer: &mut Framebuffer, textures: &TextureManager, attacking: bool) {
+    let weapon = textures.weapon_texture(attacking);
+    let target_height = (framebuffer.height as f32 * 0.36) as usize;
+    let target_width = (target_height as f32 * weapon.aspect_ratio()) as usize;
+    let origin_x = (framebuffer.width as usize).saturating_sub(target_width) / 2;
+    let origin_y = (framebuffer.height as usize).saturating_sub(target_height);
+
+    for y in 0..target_height {
+        let v = y as f32 / (target_height - 1) as f32;
+        for x in 0..target_width {
+            let u = x as f32 / (target_width - 1) as f32;
+            framebuffer.blend_pixel(
+                (origin_x + x) as u32,
+                (origin_y + y) as u32,
+                weapon.sample(u, v),
+            );
         }
     }
 }

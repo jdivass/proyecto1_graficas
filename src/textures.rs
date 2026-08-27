@@ -10,6 +10,8 @@ pub struct TextureManager {
     final_texture: WallTexture,
     sky_texture: WallTexture,
     floor_texture: WallTexture,
+    weapon_texture: WallTexture,
+    attacking_texture: WallTexture,
     final_wall: (usize, usize),
 }
 
@@ -25,6 +27,10 @@ impl WallTexture {
         let y = (v.clamp(0.0, 1.0) * (self.height - 1) as f32) as usize;
         self.pixels[y * self.width + x]
     }
+
+    pub fn aspect_ratio(&self) -> f32 {
+        self.width as f32 / self.height as f32
+    }
 }
 
 impl TextureManager {
@@ -32,6 +38,7 @@ impl TextureManager {
         let texture_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("textures");
         let background = load_image(&texture_dir.join("background.png"))?;
         let final_image = load_image(&texture_dir.join("final.png"))?;
+        let attacking_image = load_image(&texture_dir.join("attacking.png"))?;
         let sky_image = load_image(&texture_dir.join("sky.png"))?;
         let floor_image =
             load_first_image(&[texture_dir.join("floor.png"), texture_dir.join("floor.jpg")])?;
@@ -44,7 +51,13 @@ impl TextureManager {
                 path.extension().and_then(|extension| extension.to_str()) == Some("png")
                     && !matches!(
                         path.file_name().and_then(|name| name.to_str()),
-                        Some("background.png" | "final.png" | "sky.png" | "floor.png")
+                        Some(
+                            "attacking.png"
+                                | "background.png"
+                                | "final.png"
+                                | "sky.png"
+                                | "floor.png"
+                        )
                     )
             })
             .collect();
@@ -73,6 +86,8 @@ impl TextureManager {
         let final_texture = compose_wall(&background, &final_image, 0.16);
         let sky_texture = cache_image(&sky_image);
         let floor_texture = cache_image(&floor_image);
+        let weapon_texture = cache_image(&final_image);
+        let attacking_texture = cache_image(&attacking_image);
 
         Ok(Self {
             wall_textures,
@@ -80,6 +95,8 @@ impl TextureManager {
             final_texture,
             sky_texture,
             floor_texture,
+            weapon_texture,
+            attacking_texture,
             final_wall: find_final_wall(maze),
         })
     }
@@ -91,6 +108,18 @@ impl TextureManager {
             self.wall_textures
                 .get(&(map_x, map_y, wall_side))
                 .unwrap_or(&self.default_texture)
+        }
+    }
+
+    pub fn final_wall(&self) -> (usize, usize) {
+        self.final_wall
+    }
+
+    pub fn weapon_texture(&self, attacking: bool) -> &WallTexture {
+        if attacking {
+            &self.attacking_texture
+        } else {
+            &self.weapon_texture
         }
     }
 
