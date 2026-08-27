@@ -43,3 +43,16 @@ cargo test
 ```
 
 The game opens in a window sized to approximately 80% of the current monitor.
+
+## Implemented features:
+
+| Puntos | Features |
+| ---    | ---      |
+| 20     | Implementar rotación con el mouse (solo horizontal) |
+| 10     | Implementar un minimapa que muestre la posicion del jugador en el mundo |
+| 5      | Agregar musica de fondo |
+| 10 | Agregar efectos de sonido |
+| 20 | Al menos 1 animacion a alguna sprite en la pantalla |
+| 5  | Pantalla de bienvenida |
+| 10 | La pantalla de bienvenida permite seleccionar entre multiples niveles |
+| 10 | Pantalla de exito cuando se cumple una condicion en el nivel |
