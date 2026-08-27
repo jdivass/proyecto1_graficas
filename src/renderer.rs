@@ -102,6 +102,28 @@ fn render_minimap(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, b
         origin_x as f32 + player.pos.x * scale,
         origin_y as f32 + player.pos.y * scale,
     );
+
+    framebuffer.set_current_color(Color::YELLOW);
+    let minimap_rays = 9;
+    for ray in 0..minimap_rays {
+        let ray_progress = ray as f32 / (minimap_rays - 1) as f32;
+        let a = player.a - player.fov / 2.0 + player.fov * ray_progress;
+        let intersect = cast_ray(framebuffer, maze, player, a, block_size, false);
+        let ray_end = Vector2::new(
+            origin_x as f32 + (player.pos.x + a.cos() * intersect.distance) * scale,
+            origin_y as f32 + (player.pos.y + a.sin() * intersect.distance) * scale,
+        );
+        let ray_end = Vector2::new(
+            ray_end
+                .x
+                .clamp(origin_x as f32, (origin_x + map_width - 1) as f32),
+            ray_end
+                .y
+                .clamp(origin_y as f32, (origin_y + map_height - 1) as f32),
+        );
+        line(framebuffer, player_position, ray_end);
+    }
+
     let marker_radius = (cell_size / 4).max(2) as i32;
     fill_rectangle(
         framebuffer,
@@ -111,16 +133,6 @@ fn render_minimap(framebuffer: &mut Framebuffer, maze: &Maze, player: &Player, b
         (marker_radius * 2 + 1) as usize,
         Color::MAGENTA,
     );
-
-    framebuffer.set_current_color(Color::YELLOW);
-    let direction_length = (cell_size * 2).max(8) as f32;
-    let direction_end = Vector2::new(
-        (player_position.x + player.a.cos() * direction_length)
-            .clamp(origin_x as f32, (origin_x + map_width - 1) as f32),
-        (player_position.y + player.a.sin() * direction_length)
-            .clamp(origin_y as f32, (origin_y + map_height - 1) as f32),
-    );
-    line(framebuffer, player_position, direction_end);
 }
 
 fn fill_rectangle(
@@ -167,8 +179,8 @@ fn render_3d(
         let corrected_distance = (intersect.distance * (a - player.a).cos()).max(0.1);
         let wall_height = block_size as f32 * projection_plane / corrected_distance;
         let projected_top = (height as f32 - wall_height) / 2.0;
-        let wall_top = projected_top.max(0.0) as usize;
-        let wall_bottom = (projected_top + wall_height).min(height as f32) as usize;
+        let wall_top = (projected_top.floor() as isize - 1).clamp(0, height as isize) as usize;
+        let wall_bottom = ((projected_top + wall_height).ceil() as usize + 1).min(height);
         let brightness = (220.0 / (1.0 + corrected_distance * 0.01)).clamp(45.0, 200.0) as u8;
         draw_stake(
             framebuffer,

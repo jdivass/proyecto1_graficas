@@ -37,6 +37,10 @@ fn main() {
         monitor_position.y as i32 + (monitor_height - window_height) / 2,
     );
 
+    let Some((maze_width, maze_height)) = select_level(&mut window, &raylib_thread) else {
+        return;
+    };
+
     let mut framebuffer = Framebuffer::new(
         window_width as u32,
         window_height as u32,
@@ -45,7 +49,7 @@ fn main() {
 
     framebuffer.set_background_color(Color::new(50, 50, 100, 255));
 
-    let maze = create_maze(15, 11);
+    let maze = create_maze(maze_width, maze_height);
     let textures = TextureManager::new(&maze).expect("Failed to load museum textures");
     let block_size = 40;
     let mut player = Player {
@@ -78,4 +82,98 @@ fn main() {
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
     }
+}
+
+fn select_level(window: &mut RaylibHandle, raylib_thread: &RaylibThread) -> Option<(usize, usize)> {
+    loop {
+        if window.window_should_close() {
+            return None;
+        }
+
+        let selected_level = if window.is_key_pressed(KeyboardKey::KEY_ONE)
+            || window.is_key_pressed(KeyboardKey::KEY_KP_1)
+        {
+            Some((15, 11))
+        } else if window.is_key_pressed(KeyboardKey::KEY_TWO)
+            || window.is_key_pressed(KeyboardKey::KEY_KP_2)
+        {
+            Some((21, 15))
+        } else if window.is_key_pressed(KeyboardKey::KEY_THREE)
+            || window.is_key_pressed(KeyboardKey::KEY_KP_3)
+        {
+            Some((31, 21))
+        } else {
+            None
+        };
+
+        if selected_level.is_some() {
+            return selected_level;
+        }
+
+        let screen_width = window.get_screen_width();
+        let screen_height = window.get_screen_height();
+        let mut drawing = window.begin_drawing(raylib_thread);
+        drawing.clear_background(Color::new(18, 20, 32, 255));
+
+        draw_centered_text(
+            &mut drawing,
+            "MUSEUM MAZE",
+            screen_width,
+            screen_height / 4,
+            52,
+            Color::GOLD,
+        );
+        draw_centered_text(
+            &mut drawing,
+            "Select a level",
+            screen_width,
+            screen_height / 4 + 75,
+            28,
+            Color::RAYWHITE,
+        );
+        draw_centered_text(
+            &mut drawing,
+            "1  SMALL   -   15 x 11",
+            screen_width,
+            screen_height / 2 - 35,
+            26,
+            Color::LIME,
+        );
+        draw_centered_text(
+            &mut drawing,
+            "2  MEDIUM  -   21 x 15",
+            screen_width,
+            screen_height / 2 + 15,
+            26,
+            Color::SKYBLUE,
+        );
+        draw_centered_text(
+            &mut drawing,
+            "3  LARGE   -   31 x 21",
+            screen_width,
+            screen_height / 2 + 65,
+            26,
+            Color::ORANGE,
+        );
+        draw_centered_text(
+            &mut drawing,
+            "Press 1, 2, or 3 to begin",
+            screen_width,
+            screen_height - 90,
+            20,
+            Color::GRAY,
+        );
+    }
+}
+
+fn draw_centered_text(
+    drawing: &mut RaylibDrawHandle,
+    text: &str,
+    screen_width: i32,
+    y: i32,
+    font_size: i32,
+    color: Color,
+) {
+    let text_width = drawing.measure_text(text, font_size);
+    drawing.draw_text(text, (screen_width - text_width) / 2, y, font_size, color);
 }
