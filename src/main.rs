@@ -102,7 +102,6 @@ fn main() {
             }
             background_music.update_stream();
 
-            framebuffer.clear();
             let movement = handle_movement(&window, &mut player, &maze, block_size);
             if movement.hit_wall(textures.final_wall()) {
                 break;
